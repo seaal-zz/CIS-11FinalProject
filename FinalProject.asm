@@ -1,14 +1,16 @@
 .orig x3000
 
-LOOP    AND R5, R5, #0
+        AND R5, R5, #0
         ADD R5, R5, #5
- 
-        JSR INPUT
+LOOP    JSR INPUT
         ADD R5, R5, #-1
-        BRnp LOOP
+        BRp LOOP
         HALT
 
-INPUT   AND R4, R4, #0
+INPUT   AND R0, R0, #0
+        AND R4, R4, #0
+        AND R2, R2, #0
+        AND R3, R3, #0
         LEA R0, PROMPT
         PUTS
         GETC
@@ -30,7 +32,7 @@ INPUT   AND R4, R4, #0
         OUT                     ;ouput to user
         ; ADD R4, R3, #-9         ;R4 = OFFSET 9 from R3, THIS IS DONE FOR INPUT VALIDATION 0-9 for 1s place
         ; BRp ERROR               ;GO TO ERROR IF INPUT IS LARGER THAN 9
-
+        AND R0, R0, #0
         AND R4, R4, x0          ;Clearing R4 to use Again
         LEA R0, LF
         PUTS
