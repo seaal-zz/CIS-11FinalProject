@@ -3,15 +3,13 @@
 LOOP    AND R5, R5, #0
         ADD R5, R5, #5
  
-        LD R6, Array
         JSR INPUT
-        ST R4, R6
-        ADD R6, R6, #1
         ADD R5, R5, #-1
         BRnp LOOP
         HALT
 
-INPUT   LEA R0, PROMPT
+INPUT   AND R4, R4, #0
+        LEA R0, PROMPT
         PUTS
         GETC
         ADD R2, R0, x0          ;Copy  input into Register 2
@@ -34,10 +32,11 @@ INPUT   LEA R0, PROMPT
         ; BRp ERROR               ;GO TO ERROR IF INPUT IS LARGER THAN 9
 
         AND R4, R4, x0          ;Clearing R4 to use Again
+        LEA R0, LF
+        PUTS
         
         LD R4, TEN              ;used to multiply by 10
         JSR BY10 
-        AND R4, R4, #0
         ADD R4, R1, R2
         RET
         
@@ -50,4 +49,5 @@ BY10    ADD R1, R1, R2          ;Multiplying by 10
 TEN .FILL x000A
 
 PROMPT .STRINGZ "ENTER TEST SCORE: "
+LF      .STRINGZ "\n"
 .END
