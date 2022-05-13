@@ -1,9 +1,12 @@
-; 
+; Final Project
+; Program to calculate the minimum, maximum, and average test scores of 5 inputted test scores.
+; Ethan Ortega, Tyler Cox, Monteserrat Castellanos, 12 May 2022, CIS-11
 
 .orig x3000
 
         AND R5, R5, #0
         ADD R5, R5, #5
+	LD R6, BASE		; load base of stack
 LOOP    JSR INPUT
         ADD R5, R5, #-1
         BRp LOOP
@@ -43,6 +46,7 @@ INPUT   ST R7, SAVEREG7
         JSR BY10
         AND R4, R4, #0          ;Clearing R4 to use Again
         ADD R4, R1, R3
+	JSR PUSH		; store inputted value into stack
         LD R7, SAVEREG7
         RET
         
@@ -55,10 +59,12 @@ BY10    ADD R1, R1, R2          ;Multiplying by 10
 ; push subroutine (R4 = input, R6 = stack location)
 PUSH	STR R4, R6, X0	; store R4 into address held in R6
 	ADD R6, R6, X-1	; move up stack
+	RET		; return
 
 ; pop subroutine (R4 = output, R6 = stack location)
 POP	ADD R6, R6, X1	; move down stack
 	LDR R4, R6, X0	; load R4 with value at address held in R6
+	RET		; return
 
 ; data -----------------------------------------------
 ; (i) = input, (c) = caluclated during execution, no () = constant
