@@ -54,7 +54,7 @@ BY10    ADD R1, R1, R2          ;Multiplying by 10
 
 ; push subroutine (R4 = input, R6 = stack location)
 PUSH	STR R4, R6, X0	; store R4 into address held in R6
-	ADD R6, R6, x-1	; move up stack
+	ADD R6, R6, X-1	; move up stack
 
 ; pop subroutine (R4 = output, R6 = stack location)
 POP	ADD R6, R6, X1	; move down stack
