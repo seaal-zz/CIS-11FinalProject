@@ -4,14 +4,24 @@
 
 .orig x3000
 
-        AND R5, R5, #0
-        ADD R5, R5, #5
-	LD R6, BASE		; load base of stack
+; first, get the 5 test scores
+        AND R5, R5, #0	; clear R5
+        ADD R5, R5, #5	; counter to keep track of how many test scores have been entered
+	LD R6, BASE	; load base of stack
 LOOP    JSR INPUT
-        ADD R5, R5, #-1
-        BRp LOOP
-        HALT
-INPUT   ST R7, SAVEREG7
+        ADD R5, R5, #-1	; decrement counter
+        BRp LOOP	; loop until 5 test scores are submitted
+
+; second, calculate the average, minimum, and maximum test scores
+	JSR AVG		; get average score	
+	STI R4, AVERAGE	; store average score
+	
+	; insert min and max jumps here
+	
+        HALT		; end program execution
+
+; subroutine to input test score
+INPUT   ST R7, SAVEREG7		; save return address (since it will be overridden)
 	AND R0, R0, #0
         AND R1, R1, #0
         AND R4, R4, #0
@@ -21,7 +31,7 @@ INPUT   ST R7, SAVEREG7
         PUTS
         GETC
         ADD R2, R0, x0          ;Copy  input into Register 2
-        ;offset digit in 10s place
+        ; offset digit in 10s place
         ADD R2, R2, #-16        ;offset at 16
         ADD R2, R2, #-16        ;offset at 32
         ADD R2, R2, #-16        ;offset at 48
@@ -47,35 +57,78 @@ INPUT   ST R7, SAVEREG7
         AND R4, R4, #0          ;Clearing R4 to use Again
         ADD R4, R1, R3
 	JSR PUSH		; store inputted value into stack
-        LD R7, SAVEREG7
-        RET
+        LD R7, SAVEREG7		; load return address
+        RET			; return
         
 BY10    ADD R1, R1, R2          ;Multiplying by 10
         ADD R4, R4, #-1
         BRP BY10
         ADD R1, R1, x0
-        RET
+        RET			; return
 
 ; push subroutine (R4 = input, R6 = stack location)
 PUSH	STR R4, R6, X0	; store R4 into address held in R6
 	ADD R6, R6, X-1	; move up stack
 	RET		; return
 
-; pop subroutine (R4 = output, R6 = stack location)
+; pop subroutine (R4 will = output, R6 = stack location)
 POP	ADD R6, R6, X1	; move down stack
 	LDR R4, R6, X0	; load R4 with value at address held in R6
+	RET		; return
+
+; unneeded subroutine; I, Cox, made this during the project creation, completely
+; forgetting that the stack in this project has a static size and therefore
+; does not need its size checked. But let it be known I at least remembered
+; how to make it.
+; stack validation subroutine (check if empty or underflowed)
+; (R6 = stack location, R4 will = 1 for empty/0 for not empty, uses R4-6)
+; ISEMPTY	LD R5, NBASE	; load negative base (xC000)
+; 		AND R4, R4, X0	; clear R4
+; 		ADD R5, R5, R6	; R5 = stack location - base
+; 		BRzp EMPTY	; break if stack location is at base or below
+; 		RET		; return (stack is not empty)
+; EMPTY		ADD R4, R4, X1	; R4 = 1
+; 		RET		; return (stack is empty)
+	
+
+; average subroutine (R4 will = average, uses R3-7)
+AVG	; initialize
+	ST R7, SAVEREG7	; save return address (since it will be overridden)
+	LD R6, TBASE	; load top of stack
+	AND R5, R5, X0	; clear R5
+	AND R3, R3, X0	; clear R3
+	ADD R3, R3, X5	; counter to help check entire stack
+AVGLOOP	
+	; get sum of all test scores in stack
+	JSR POP		; get first/next number from stack
+	ADD R5, R5, R4	; R5 = R5 + next number obtained from stack
+	ADD R3, R3, X-1	; decrement counter
+	BRp AVGLOOP	; keep adding until every number in stack has been added	
+	AND R4, R4, X0	; clear R4 (for counting quotient)
+DIV	
+	; divide sum by 5	
+	ADD R5, R5, X-5	; subtract sum by 5
+	BRn DIVDONE	; if R5 is negative, quotient has been found
+	ADD R4, R4, X1	; increment R4 (will equal quotient)
+	BR DIV		; loop
+DIVDONE	
+	; return
+	LD R7, SAVEREG7	; load return address
 	RET		; return
 
 ; data -----------------------------------------------
 ; (i) = input, (c) = caluclated during execution, no () = constant
 
-TEN .FILL x000A
+TEN 		.FILL x000A
 
-PROMPT .STRINGZ "ENTER TEST SCORE: "
-LF      .STRINGZ "\n"
+PROMPT 		.STRINGZ "ENTER TEST SCORE: "
+LF      	.STRINGZ "\n"
 
-BASE	.FILL X4000	; base of test score stack
+BASE		.FILL X4000	; base of test score stack
+TBASE		.FILL X3FFB	; top of stack
+; NBASE		.FILL XC000	; negative base (unused, was going to be used for stack validation)
 
 SAVEREG7        .FILL X3200     ; (c) saves register 7 (for subroutines within subroutines)
+AVERAGE		.FILL X3201	; (c) average test score
 
 .END
