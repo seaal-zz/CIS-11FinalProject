@@ -1,5 +1,3 @@
-
-   
 ; Final Project
 ; Program to calculate the minimum, maximum, and average test scores of 5 inputted test scores.
 ; Ethan Ortega, Tyler Cox, Monteserrat Castellanos, 12 May 2022, CIS-11
