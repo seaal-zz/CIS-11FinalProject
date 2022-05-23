@@ -17,7 +17,28 @@ LOOP    JSR INPUT
         JSR FINDMIN
         JSR AVG		; get average score	
 	STI R4, AVERAGE	; store average score
-	
+
+        LDI R4, MAX
+        JSR DIV2
+        ;10s place in R5, ones place in R4
+        LEA R0, MAXTEXT
+        JSR OUTPUT
+
+        LDI R4, MIN
+        JSR DIV2
+        LEA R0, MINTEXT
+        JSR OUTPUT
+
+        LDI R4, AVERAGE
+        JSR DIV2
+        LEA R0, AVETEXT
+        JSR OUTPUT
+
+
+
+
+
+
 
         HALT
 INPUT   ST R7, SAVEREG7
@@ -157,15 +178,65 @@ DIVDONE
 	LD R7, SAVEREG7	; load return address
 	RET		; return
 
+;Converting to characters---------------
+DIV2   
+        ;check if number is 3 digits
+
+        ;R4 = number to be divided
+        AND R5, R5, #0
+        AND R6, R6, #0
+        AND R0, R0, #0  ;clear register for divisor
+        ADD R0, R0, #10  ;divisor = 10
+        ADD R6, R0, #0  ;Y into R6
+        NOT R0, R0
+        ADD R0, R0, #1  ;divisor = -10
+        ; ADD R0, R3, R4  ;Subtract X by Y
+        ; ; BRn QUIT2
+LOOP4   ADD R5, R5, #1
+        ADD R4, R4, R0
+        BRp LOOP4       ;if positive, go back to loop
+        BRz QUIT3       ;if 0, got to quit3
+        ADD R4, R4, R6  ;if neg, add result + Y
+        ADD R5, R5, #-1 ;if neg, add the counter + 1
+        BR QUIT3
+QUIT3   RET
+;---------------------------------------
+
+OUTPUT          ST R7, SAVEREG7
+                PUTS
+                AND R0, R0, #0
+                ADD R5, R5, #15        ;offset at 16
+                ADD R5, R5, #15        ;offset at 32
+                ADD R5, R5, #15        ;offset at 48
+                ADD R5, R5, #3
+                ADD R0, R5, R0
+                OUT
+
+                AND R0, R0, #0
+                ADD R4, R4, #15       ;offset at 16
+                ADD R4, R4, #15        ;offset at 32
+                ADD R4, R4, #15        ;offset at 48
+                ADD R4, R4, #3
+                ADD R0, R4, R0
+                OUT
+
+                LEA R0, LF
+                PUTS
+                LD R7, SAVEREG7
+                RET
+
 
 
 TEN .FILL x000A
 
-PROMPT .STRINGZ "ENTER TEST SCORE: "
-LF      .STRINGZ "\n"
+PROMPT          .STRINGZ "ENTER TEST SCORE: "
+MAXTEXT         .STRINGZ "The highest score is: "
+MINTEXT         .STRINGZ "The lowest score is: "
+AVETEXT         .STRINGZ "The average score is: "
+LF              .STRINGZ "\n"
 
-MAX        .FILL x3100          ;Saves Max Value
-MIN        .FILL x3101          ;Saves Min Value
+MAX             .FILL x3100          ;Saves Max Value
+MIN             .FILL x3101          ;Saves Min Value
 
 BASE		.FILL X4000	; base of test score stack
 TBASE		.FILL X3FFB	; top of stack
