@@ -3,6 +3,9 @@
 ; Ethan Ortega, Tyler Cox, Monteserrat Castellanos, 12 May 2022, CIS-11
 
 .orig x3000
+AND R0, R0, X0		; non-consequential statement to start program on (every time I re-ran the program,
+			; it would always skip the first statement for some reason)
+JSR MPROMPT		; print main prompt
 
 ; first, get the 5 test scores
         AND R5, R5, #0	; clear R5
@@ -11,6 +14,7 @@
 LOOP    JSR INPUT	; input a test score
         ADD R5, R5, #-1	; decrement counter
         BRp LOOP	; loop until 5 test scores are submitted
+	PUTS		; print new line
 
 ; second, calculate the average, minimum, and maximum test scores
 	JSR FINDMAX	; find maximum score
@@ -20,20 +24,22 @@ LOOP    JSR INPUT	; input a test score
 
 ; third, print the results
 
-	LDI R4, MAX	
-        JSR DIV2	
-        ; 10s place in R5, ones place in R4	
-        LEA R0, MAXTEXT	
+	LDI R5, MAX	
+        LEA R0, TEXT	
         JSR OUTPUT
 
-	LDI R4, MIN
-	JSR DIV2	
-        LEA R0, MINTEXT	
+	LDI R5, MIN
+        LEA R0, TEXT
+	ADD R0, R0, #11	; get min text
+	ADD R0, R0, #12
         JSR OUTPUT
 
-	LDI R4, AVERAGE	
-        JSR DIV2	
-        LEA R0, AVETEXT	
+	LDI R5, AVERAGE	
+        LEA R0, TEXT
+	ADD R0, R0, #12	; get average text
+	ADD R0, R0, #12
+	ADD R0, R0, #12
+	ADD R0, R0, #10
         JSR OUTPUT
 	
 	HALT		; end program execution
@@ -82,10 +88,6 @@ INPUT   ST R7, SAVEREG7		; save return address (since it will be overridden)
         	ADD R4, R4, #-16        ; offset at 32
         	ADD R4, R4, #-16        ; offset at 48
 		OUT			; output to user
-	; print a new line
-        	AND R0, R0, #0 		; clear R0
-        	LEA R0, LF		; load new line
-        	PUTS			; print new line
         ; calculate hundreds place digit
 		LD R5, HUNDRED		; R5 = #100
 		JSR MULT		; R1 = hundreds place digit
@@ -96,9 +98,13 @@ INPUT   ST R7, SAVEREG7		; save return address (since it will be overridden)
 		ADD R2, R3, X0		; place R3 into R2
 		JSR MULT		; R1 = tens place digit
 		ADD R0, R0, R1		; add tens place to hundreds place
-	; finalize & exit
+	; finalize
 		ADD R4, R4, R0		; add ones place
 		JSR PUSH		; store inputted value into stack
+	; print a new line & exit
+        	AND R0, R0, #0 		; clear R0
+        	LEA R0, LF		; load new line
+        	PUTS			; print new line
         	LD R7, SAVEREG7		; load return address
 		LDI R5, SAVEREG5	; restore counter
         	RET			; return
@@ -181,52 +187,76 @@ NEW2		STI R4, MIN	; if value is greater than current max, make that value new
                 LD R7, SAVEREG7
                 RET
 
-; converting to characters subroutine
-DIV2 	  	
-        ;check if number is 3 digits	
-
-        ;R4 = number to be divided
-        AND R5, R5, #0	
-        AND R6, R6, #0	
-        AND R0, R0, #0  ;clear register for divisor	
-        ADD R0, R0, #10  ;divisor = 10	
-        ADD R6, R0, #0  ;Y into R6	
-        NOT R0, R0	
-        ADD R0, R0, #1  ;divisor = -10	
-        ; ADD R0, R3, R4  ;Subtract X by Y	
-        ; ; BRn QUIT2	
-LOOP4   ADD R5, R5, #1	
-        ADD R4, R4, R0	
-        BRp LOOP4       ;if positive, go back to loop	
-        BRz QUIT3       ;if 0, got to quit3	
-        ADD R4, R4, R6  ;if neg, add result + Y	
-        ADD R5, R5, #-1 ;if neg, add the counter + 1	
-        BR QUIT3	
-QUIT3   RET
-
 ; print subroutine
-OUTPUT          ST R7, SAVEREG7	
-                PUTS	
-                AND R0, R0, #0	
-                ADD R5, R5, #15        ;offset at 16	
-                ADD R5, R5, #15        ;offset at 32	
-                ADD R5, R5, #15        ;offset at 48	
-                ADD R5, R5, #3	
-                ADD R0, R5, R0	
-                OUT	
+OUTPUT  
+; initialize    
+	ST R7, SAVEREG7	; save R7
+	AND R1, R1, X0	; clear R1 for storing digits
+	LD R6, ASCII	; load ASCII offset into R6
+	AND R3, R3, X0
+        PUTS		; print info that states what is being displayed
 
-                AND R0, R0, #0	
-                ADD R4, R4, #15       ;offset at 16	
-                ADD R4, R4, #15        ;offset at 32	
-                ADD R4, R4, #15        ;offset at 48	
-                ADD R4, R4, #3	
-                ADD R0, R4, R0	
-                OUT	
+; calculate digits
+	; find hundreds place
+	LD R2, HUNDRED	; R2 = #100
+	JSR DIV		; R4 = R5 / 100, R5 = R5 % 100
+	ADD R1, R4, X0	; place hundreds digit in R1
+	; find tens & ones place
+	AND R2, R2, X0	; clear R2
+	ADD R2, R2, XA	; R2 = #10
+	JSR DIV		; R4 = R5 / 10, R5 = R5 % 10
+	; R1 = hundreds place, R4 = tens place, R5 = ones place
 
-                LEA R0, LF	
-                PUTS	
-                LD R7, SAVEREG7	
-                RET
+; print digits
+	; print hundreds place
+	ADD R1, R1, X0	; load R1 to check
+	BRnz SKIP1	; do not print if hundreds place is 0
+	ADD R0, R1, R6	; move R1 to R0 w/ ASCII offset
+	OUT		; print hundreds place
+	BR SKIP1A	; DO NOT check tens place if hundreds place != 0
+	; print tens place
+SKIP1	ADD R4, R4, X0	; load R4 to check
+	BRnz SKIP2	; do not print if hundreds & tens place is 0
+SKIP1A	ADD R0, R4, R6	; move R4 to R0 w/ ASCII offset
+	OUT		; print tens place
+	; print ones place
+SKIP2	ADD R0, R5, R6	; move R5 to R0 w/ ASCII offset
+	OUT		; print ones place
+
+; calculate letter grade
+	LEA R0, LGRADE	; load letter grade array
+	; check hundreds place first
+	ADD R1, R1, X0	; load R1
+	BRp GRADEA	; "A" if hundreds place is >= 1
+	; check tens place next
+	ADD R1, R4, X-9	; R1 = tens digit - 9
+	BRz GRADEA	; "A" if tens place = 9
+	ADD R1, R4, X-8	; R1 = tens digit - 8
+	BRz GRADEB	; "B" if tens place = 8
+	ADD R1, R4, X-7	; R1 = || - 7
+	BRz GRADEC	; "C" if || = 7
+	ADD R1, R4, X-6	; R1 = || - 6
+	BRz GRADED	; "D" if || = 6
+	BR GRADEF	; "F" if || < 6
+
+GRADEA	PUTS		; print " A"
+	BR GCALCD	; grade calculation done
+GRADEB	ADD R0, R0, X3	; go to next array element
+	PUTS		; print " B"
+	BR GCALCD
+GRADEC	ADD R0, R0, X6
+	PUTS		; print " C"
+	BR GCALCD
+GRADED	ADD R0, R0, X9
+	PUTS		; print " D"
+	BR GCALCD
+GRADEF	ADD R0, R0, #12
+	PUTS		; print " F"
+
+GCALCD  LEA R0, LF	
+        PUTS	
+        LD R7, SAVEREG7	
+        RET
 
 ; average subroutine (R4 will = average, uses R3-7)
 AVG	; initialize
@@ -241,17 +271,39 @@ AVGLOOP
 	ADD R5, R5, R4	; R5 = R5 + next number obtained from stack
 	ADD R3, R3, X-1	; decrement counter
 	BRp AVGLOOP	; keep adding until every number in stack has been added	
-	AND R4, R4, X0	; clear R4 (for counting quotient)
-DIV	
-	; divide sum by 5	
-	ADD R5, R5, X-5	; subtract sum by 5
-	BRn DIVDONE	; if R5 is negative, quotient has been found
-	ADD R4, R4, X1	; increment R4 (will equal quotient)
-	BR DIV		; loop
-DIVDONE	
+	AND R2, R2, X0	; clear R2
+	ADD R2, R2, X5	; R2 = 5 (to divide sum by 5)
+	JSR DIV		; R4 = sum / 5
 	; return
 	LD R7, SAVEREG7	; load return address
 	RET		; return
+
+; division subroutine (R5 = dividend, R2 = divisor, R5 will = remainder, R4 will = quotient, uses R2, & R4-5)
+DIV	; initialize
+	AND R4, R4, X0	; clear R4 (quotient)
+	NOT R2, R2	; negate R2
+	ADD R2, R2, X1
+DIVLOOP	; subtract R2 from R5 until R5 is negative or 0
+	ADD R5, R5, R2	; R5 = R5 - R2
+	BRn DLDONE	; break if R5 < 0
+	ADD R4, R4, X1	; increment quotient
+	ADD R5, R5, X0	; load R5
+	BRz DIVDONE	; return if R5 = 0 (perfect division)
+	BR DIVLOOP	; loop
+DLDONE	; fix remainder
+	NOT R2, R2
+	ADD R2, R2, X1	; negate R2 again
+	ADD R5, R5, R2	; correct remainder
+DIVDONE	RET		; return
+
+; print main prompt subroutine (prompt is too far away for code to reach & is too large to put closer, I assume anyway)
+MPROMPT	ST R7, SAVEREG7		; save return address (since it will be overridden)
+	LEA R0, MAINPROMPT	; load main prompt 1
+	PUTS			; print
+	LEA R0, MAINPROMPT2	; load main prompt 2
+	PUTS			; print
+	LD R7, SAVEREG7		; load return address
+	RET			; return
 
 
 ; data --------------------------------------------------------------
@@ -259,6 +311,7 @@ DIVDONE
 
 
 HUNDRED		.FILL X64	; #100
+ASCII		.FILL X30	; ASCII offset
 
 BASE		.FILL X4000	; base of test score stack
 TBASE		.FILL X3FFB	; top of stack + 1
@@ -270,10 +323,20 @@ AVERAGE		.FILL X3202	; (c) average test score
 SAVEREG5	.FILL X3203	; (c) saves register 5 (to preserve counter data)
 SAVEREG7        .FILL X3204     ; (c) saves register 7 (for subroutines within subroutines)
 
+TEXTOFFSET	.FILL #23	; how large each end result text box is
 LF      	.STRINGZ "\n"
-PROMPT 		.STRINGZ "ENTER TEST SCORE: "
-MAXTEXT         .STRINGZ "The highest score is: "	
-MINTEXT         .STRINGZ "The lowest score is: "	
-AVETEXT         .STRINGZ "The average score is: "
+PROMPT 		.STRINGZ "ENTER TEST SCORE: "	
+TEXT		.STRINGZ "The highest score is: "
+	        .STRINGZ "The lowest score is:  "
+		.STRINGZ "The average score is: "
+
+LGRADE		.STRINGZ " A"
+		.STRINGZ " B"
+		.STRINGZ " C"
+		.STRINGZ " D"
+		.STRINGZ " F"
+
+MAINPROMPT	.STRINGZ "This program will find the minimum, maximum, and average\nof 5 inputted test scores. Please enter the scores in the\n"
+MAINPROMPT2	.STRINGZ "format of \"000\", ranging from 0-100. If the score does\nnot have a hundreds or hundreds & tens place, please fill\nin those spaces with a 0.\n\n"
 
 .END
