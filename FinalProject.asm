@@ -187,7 +187,7 @@ NEW2		STI R4, MIN	; if value is greater than current max, make that value new
                 LD R7, SAVEREG7
                 RET
 
-; print subroutine
+; print subroutine (R0 = current test score being printed (string), R5 = test score being analyzed, uses all registers)
 OUTPUT  
 ; initialize    
 	ST R7, SAVEREG7	; save R7
